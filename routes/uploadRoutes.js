@@ -6,6 +6,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { extractTextFromPDF } from '../utils/extract.js';
 import { generateInterviewQuestions } from '../utils/geminiService.js';
+import { continueChatWithGemini } from '../utils/geminiService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -74,6 +75,34 @@ router.post('/upload', protect, upload.single('pdfFile'), async (req, res) => {
             fs.unlinkSync(req.file.path);
             console.log('File deleted due to an error');
         }
+    }
+});
+
+router.post('/chat', protect, async (req, res) => {
+    try {
+        const { query, jobPosition, resumeText, previousResponse } = req.body;
+        
+        if (!query || !jobPosition || !resumeText) {
+            return res.status(400).json({ error: 'Required information missing' });
+        }
+        
+        console.log("Chat query received:", query);
+        console.log("Job Position:", jobPosition);
+        
+        const response = await continueChatWithGemini(
+            query, 
+            resumeText, 
+            jobPosition, 
+            previousResponse
+        );
+        
+        res.json({
+            response: response
+        });
+        
+    } catch (error) {
+        console.error('Error processing chat request:', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 
